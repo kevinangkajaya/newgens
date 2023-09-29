@@ -1,0 +1,1 @@
+This is assignment project for newgens interview test.
