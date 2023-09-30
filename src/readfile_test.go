@@ -1,7 +1,6 @@
 package src
 
 import (
-	"fmt"
 	"testing"
 )
 
@@ -17,8 +16,8 @@ func TestReadLines(t *testing.T) {
 		{"../model", false},
 	}
 	// The execution loop
-	for i, tt := range tests {
-		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
 			result, err := ReadLines(tt.input)
 			if err != nil {
 				if result != nil && tt.want != false {
