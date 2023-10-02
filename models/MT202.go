@@ -3,6 +3,8 @@ package models
 import (
 	"errors"
 	"fmt"
+	"newgens/src"
+	"strings"
 	"time"
 	"unicode"
 
@@ -33,14 +35,23 @@ func (r *MT202) Validate() error {
 	if err := r.SenderBIC.Validate("SenderBIC"); err != nil {
 		return err
 	}
-	if err := r.ReceiverBIC.Validate("ReceiverBIC"); err != nil {
-		return err
+	if r.Direction == "I" {
+		if err := r.ReceiverBIC.Validate("ReceiverBIC"); err != nil {
+			return err
+		}
 	}
 	if r.Direction != "O" && r.Direction != "I" {
 		return errors.New("direction should be 'O' or 'I'")
 	}
 	if len(r.MTType) != 3 {
 		return errors.New("MTType should have 3 characters")
+	} else {
+		for _, v := range r.MTType {
+			if !unicode.IsDigit(v) {
+				return errors.New("MTType should be digit only")
+			}
+		}
+
 	}
 	if len(r.UETR) != 36 {
 		return errors.New("UETR should have 36 characters")
@@ -75,4 +86,46 @@ func (address MT202SwiftAddress) Validate(name string) error {
 	}
 
 	return nil
+}
+
+func NewMT202FromRaw(rawData *MT202Raw) (*MT202, error) {
+	if err := rawData.Validate(); err != nil {
+		return nil, err
+	}
+
+	// --------------------------------- application header ---------------------------------
+	direction := rawData.ApplicationHeader[0:1]
+	var destinationAddress MT202SwiftAddress
+	if direction == "I" {
+		destinationAddress = MT202SwiftAddress(rawData.ApplicationHeader[4:16])
+	}
+
+	// --------------------------------- F32A ---------------------------------
+	F32A_ValueDate, err := time.Parse("060102", rawData.Body.ValueDateCurrencyAmount[0:6])
+	if err != nil {
+		return nil, err
+	}
+	F32A_Currency := rawData.Body.ValueDateCurrencyAmount[6:9]
+	F32A_Amount, err := decimal.NewFromString(src.ReplaceCommaWithDot(rawData.Body.ValueDateCurrencyAmount[9:]))
+	if err != nil {
+		return nil, err
+	}
+
+	// --------------------------------- result ---------------------------------
+	return &MT202{
+		SenderBIC:      MT202SwiftAddress(rawData.BasicHeader[3:15]),
+		ReceiverBIC:    destinationAddress,
+		Direction:      direction,
+		MTType:         rawData.ApplicationHeader[1:4],
+		UETR:           rawData.UserHeader.UniqueEndToEndID,
+		F20:            rawData.Body.TransactionReferenceNumber,
+		F21:            rawData.Body.RelatedReference,
+		F32A_ValueDate: F32A_ValueDate,
+		F32A_Currency:  F32A_Currency,
+		F32A_Amount:    F32A_Amount,
+		F52a:           strings.Join(rawData.Body.OrderingInstitution, "."),
+		F57a:           strings.Join(rawData.Body.AccountWithInstitution, "."),
+		F58a:           strings.Join(rawData.Body.BeneficiaryInstitution, "."),
+		RawData:        rawData.RawData,
+	}, nil
 }
