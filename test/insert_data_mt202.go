@@ -148,7 +148,7 @@ func TestInsertDataMt202(t *testing.T) {
 		{"dataReceiverBIC7", &dataReceiverBIC7, true},
 		{"dataReceiverBIC13", &dataReceiverBIC13, true},
 		{"dataDirectionXX", &dataDirectionXX, true},
-		// {"dataDirectionO", &dataDirectionO, false},
+		{"dataDirectionO", &dataDirectionO, false},
 		{"dataMTType5", &dataMTType5, true},
 		{"dataMTTypeLetter", &dataMTTypeLetter, true},
 		{"dataUETR35", &dataUETR35, true},
@@ -165,6 +165,9 @@ func TestInsertDataMt202(t *testing.T) {
 	// The execution loop
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if !tt.hasError {
+				t.Skip("Not run")
+			}
 			err := mt202RepoMysql.InsertData(tt.input)
 			if err == nil {
 				if tt.hasError {

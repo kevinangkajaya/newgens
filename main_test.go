@@ -15,3 +15,7 @@ func TestInsertDataMt202(t *testing.T) {
 func TestInsertDataMt202Raw(t *testing.T) {
 	test.TestInsertDataMt202Raw(t)
 }
+
+func TestReadFilesMt202(t *testing.T) {
+	test.TestReadFilesMt202(t)
+}

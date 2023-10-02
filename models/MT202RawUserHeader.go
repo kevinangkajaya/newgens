@@ -24,12 +24,12 @@ func (r *MT202RawUserHeader) Validate() error {
 		}
 	}
 
-	// --------------------------------- service identifier ---------------------------------
+	// --------------------------------- message user reference ---------------------------------
 	// if r.MessageUserReference != "" && len(r.MessageUserReference) != 16 {
 	// 	return fmt.Errorf("message user reference length should be 0 or 16")
 	// }
 
-	// --------------------------------- service identifier ---------------------------------
+	// --------------------------------- unique end to end transaction reference ---------------------------------
 	if len(r.UniqueEndToEndID) != 36 {
 		return fmt.Errorf("unique end to end transaction reference length should be 36")
 	}
