@@ -1,13 +1,16 @@
 package test
 
 import (
+	"newgens/config"
 	"newgens/repository/mysql"
 	"newgens/src"
 	"testing"
 )
 
 func TestGetDataMt202(t *testing.T) {
-	db := src.ConnectMysql()
+	configs := config.GetConfig()
+
+	db := src.ConnectMysql(configs)
 	defer db.Close()
 
 	mt202RepoMysql := mysql.NewRepoMt202Mysql(db)

@@ -1,6 +1,7 @@
 package test
 
 import (
+	"newgens/config"
 	"newgens/models"
 	"newgens/repository/mysql"
 	"newgens/src"
@@ -8,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	_ "github.com/go-sql-driver/mysql"
 	"github.com/shopspring/decimal"
 )
 
@@ -79,7 +79,10 @@ func data2() (*models.MT202, error) {
 }
 
 func TestInsertDataMt202(t *testing.T) {
-	db := src.ConnectMysql()
+
+	configs := config.GetConfig()
+
+	db := src.ConnectMysql(configs)
 	defer db.Close()
 
 	mt202RepoMysql := mysql.NewRepoMt202Mysql(db)
@@ -165,7 +168,7 @@ func TestInsertDataMt202(t *testing.T) {
 	// The execution loop
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if !tt.hasError {
+			if !configs.InsertTestingToDatabase && !tt.hasError {
 				t.Skip("Not run")
 			}
 			err := mt202RepoMysql.InsertData(tt.input)

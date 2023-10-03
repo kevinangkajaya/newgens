@@ -4,3 +4,4 @@ database:
   userName: "axway"
   password: "Abcd1234"
   name: "ngs_db"
+insertTestingToDatabase: false

@@ -14,4 +14,6 @@ type Config struct {
 		// Name is the name of database
 		Name string
 	}
+	// if true then testing would insert data to current database
+	InsertTestingToDatabase bool
 }

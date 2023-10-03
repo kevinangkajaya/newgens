@@ -2,13 +2,12 @@ package test
 
 import (
 	"fmt"
+	"newgens/config"
 	"newgens/models"
 	"newgens/repository/mysql"
 	"newgens/src"
 	"strings"
 	"testing"
-
-	_ "github.com/go-sql-driver/mysql"
 )
 
 func data1Raw() (*models.MT202Raw, error) {
@@ -85,7 +84,9 @@ func data2Raw() (*models.MT202Raw, error) {
 }
 
 func TestInsertDataMt202Raw(t *testing.T) {
-	db := src.ConnectMysql()
+	configs := config.GetConfig()
+
+	db := src.ConnectMysql(configs)
 	defer db.Close()
 
 	mt202RepoMysql := mysql.NewRepoMt202Mysql(db)
@@ -315,7 +316,7 @@ func TestInsertDataMt202Raw(t *testing.T) {
 	// The execution loop
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if !tt.hasError {
+			if !configs.InsertTestingToDatabase && !tt.hasError {
 				t.Skip("Not run")
 			}
 			mt202, err := models.NewMT202FromRaw(tt.input)

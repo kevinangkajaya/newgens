@@ -3,6 +3,10 @@ package models
 import (
 	"errors"
 	"fmt"
+	"newgens/src"
+	"regexp"
+	"strconv"
+	"strings"
 	"unicode"
 )
 
@@ -112,4 +116,108 @@ func (r *MT202Raw) Validate() error {
 		return err
 	}
 	return nil
+}
+
+// example file is on files/202MEP_52A_57A_58A.txt
+func NewMt202RawFromFile(value string) (*MT202Raw, error) {
+	// --------------------------------- basic header ---------------------------------
+	basicHeaderRegex := regexp.MustCompile(`{1:([A-z0-9\/.:\-+, \n]+)}`)
+	basicHeaderValue := basicHeaderRegex.FindStringSubmatch(value)
+	if len(basicHeaderValue) != 2 {
+		return nil, errors.New("basic header format is wrong")
+	}
+
+	// --------------------------------- application header ---------------------------------
+	applicationHeaderRegex := regexp.MustCompile(`{2:([A-z0-9\/.:\-+, \n]+)}`)
+	applicationHeaderValue := applicationHeaderRegex.FindStringSubmatch(value)
+	if len(applicationHeaderValue) != 2 {
+		return nil, errors.New("application header format is wrong")
+	}
+
+	// --------------------------------- user header ---------------------------------
+	userHeaderRegex := regexp.MustCompile(`{3:({[{}A-z0-9\/.:\-+, \n]+})}`)
+	userHeaderValue := userHeaderRegex.FindStringSubmatch(value)
+	if len(applicationHeaderValue) != 2 {
+		return nil, errors.New("user header format is wrong")
+	}
+
+	userHeaderChildRegex := regexp.MustCompile(`{([0-9]{3}):([A-z0-9\/.:\-+, \n]+)}`)
+	userHeaderChildValue := userHeaderChildRegex.FindAllStringSubmatch(userHeaderValue[1], -1)
+
+	var serviceIdentifier string
+	var uniqueEndToEndId string
+	for _, v := range userHeaderChildValue {
+		if len(v) != 3 {
+			return nil, errors.New("user header children format is wrong")
+		}
+		keyTag, err := strconv.Atoi(v[1])
+		valueTag := src.TrimUnusedCharacters(v[2])
+		if err != nil {
+			return nil, err
+		}
+		switch keyTag {
+		case 103:
+			serviceIdentifier = valueTag
+		case 121:
+			uniqueEndToEndId = valueTag
+		}
+	}
+
+	// --------------------------------- body ---------------------------------
+	bodyRegex := regexp.MustCompile(`{4:([{}A-z0-9\/.:\-+, \n]+)}`)
+	bodyValue := bodyRegex.FindStringSubmatch(value)
+	if len(bodyValue) != 2 {
+		return nil, errors.New("body format is wrong")
+	}
+
+	bodyChildRegex := regexp.MustCompile(`:([A-z0-9]{2,3}):([A-z0-9\/.\-+, \n]+)`)
+	bodyChildValue := bodyChildRegex.FindAllStringSubmatch(bodyValue[1], -1)
+
+	body := MT202RawBody{}
+	for _, v := range bodyChildValue {
+		if len(v) != 3 {
+			return nil, errors.New("body children format is wrong")
+		}
+
+		keyTag := v[1]
+		valueTag := src.TrimUnusedCharacters(v[2])
+		switch {
+		case keyTag == "20":
+			body.TransactionReferenceNumber = valueTag
+		case keyTag == "21":
+			body.RelatedReference = valueTag
+		case keyTag == "32A":
+			body.ValueDateCurrencyAmount = valueTag
+		case strings.HasPrefix(keyTag, "52"):
+			if len(keyTag) != 3 {
+				continue
+			}
+			body.OrderingInstitutionOption = []rune(keyTag)[2]
+			body.OrderingInstitution = src.GetArrayOfStringSeparatedByEnter(valueTag)
+		case strings.HasPrefix(keyTag, "57"):
+			if len(keyTag) != 3 {
+				continue
+			}
+			body.AccountWithInstitutionOption = []rune(keyTag)[2]
+			body.AccountWithInstitution = src.GetArrayOfStringSeparatedByEnter(valueTag)
+		case strings.HasPrefix(keyTag, "58"):
+			if len(keyTag) != 3 {
+				continue
+			}
+			body.BeneficiaryInstitutionOption = []rune(keyTag)[2]
+			body.BeneficiaryInstitution = src.GetArrayOfStringSeparatedByEnter(valueTag)
+		}
+	}
+
+	// --------------------------------- result ---------------------------------
+	return &MT202Raw{
+		BasicHeader:       basicHeaderValue[1],
+		ApplicationHeader: applicationHeaderValue[1],
+		UserHeader: MT202RawUserHeader{
+			ServiceIdentifier: serviceIdentifier,
+			UniqueEndToEndID:  uniqueEndToEndId,
+		},
+		Body:    body,
+		RawData: value,
+	}, nil
 }
